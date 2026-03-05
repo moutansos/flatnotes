@@ -2,32 +2,38 @@
   <img src="docs/logo.svg" width="300px"></img>
 </p>
 <p align="center">
-  <img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/dullage/flatnotes?style=for-the-badge">
+  <a href="https://github.com/moutansos/flatnotes/pkgs/container/flatnotes">
+    <img alt="GHCR Package" src="https://img.shields.io/badge/GHCR-ghcr.io%2Fmoutansos%2Fflatnotes-24292f?style=for-the-badge&logo=github">
+  </a>
 </p>
+
+Fork note: this repository is a fork of [dullage/flatnotes](https://github.com/dullage/flatnotes) and publishes container images to `ghcr.io/moutansos/flatnotes`.
+
+Release and image publishing notes for this fork are documented in [`docs/releases.md`](docs/releases.md).
 
 A self-hosted, database-less note-taking web app that utilises a flat folder of markdown files for storage.
 
-Log into the [demo site](https://demo.flatnotes.io) and take a look around. *Note: This site resets every 15 minutes.*
+Log into the [demo site](https://demo.flatnotes.io) and take a look around. _Note: This site resets every 15 minutes._
 
 ## Contents
 
-* [Design Principle](#design-principle)
-* [Features](#features)
-* [Getting Started](#getting-started)
-  * [Hosted](#hosted)
-  * [Self Hosted](#self-hosted)
-* [Roadmap](#roadmap)
-* [Contributing](#contributing)
-* [Sponsorship](#sponsorship)
-* [Thanks](#thanks)
+- [Design Principle](#design-principle)
+- [Features](#features)
+- [Getting Started](#getting-started)
+  - [Hosted](#hosted)
+  - [Self Hosted](#self-hosted)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Sponsorship](#sponsorship)
+- [Thanks](#thanks)
 
 ## Design Principle
 
 flatnotes is designed to be a distraction-free note-taking app that puts your note content first. This means:
 
-* A clean and simple user interface.
-* No folders, notebooks or anything like that. Just all of your notes, backed by powerful search and tagging functionality.
-* Quick access to a full-text search from anywhere in the app (keyboard shortcut "/").
+- A clean and simple user interface.
+- No folders, notebooks or anything like that. Just all of your notes, backed by powerful search and tagging functionality.
+- Quick access to a full-text search from anywhere in the app (keyboard shortcut "/").
 
 Another key design principle is not to take your notes hostage. Your notes are just markdown files. There's no database, proprietary formatting, complicated folder structures or anything like that. You're free at any point to just move the files elsewhere and use another app.
 
@@ -35,15 +41,15 @@ Equally, the only thing flatnotes caches is the search index and that's incremen
 
 ## Features
 
-* Mobile responsive web interface.
-* Raw/WYSIWYG markdown editor modes.
-* Advanced search functionality.
-* Note "tagging" functionality.
-* Customisable home page.
-* Wikilink support to easily link to other notes (`[[My Other Note]]`).
-* Light/dark themes.
-* Multiple authentication options (none, read-only, username/password, 2FA).
-* Restful API.
+- Mobile responsive web interface.
+- Raw/WYSIWYG markdown editor modes.
+- Advanced search functionality.
+- Note "tagging" functionality.
+- Customisable home page.
+- Wikilink support to easily link to other notes (`[[My Other Note]]`).
+- Light/dark themes.
+- Multiple authentication options (none, read-only, username/password, 2FA).
+- Restful API.
 
 See [the wiki](https://github.com/dullage/flatnotes/wiki) for more details.
 
@@ -54,7 +60,6 @@ See [the wiki](https://github.com/dullage/flatnotes/wiki) for more details.
 A quick and easy way to get started with flatnotes is to host it on PikaPods. Just click the button below and follow the instructions.
 
 [![PikaPods](https://www.pikapods.com/static/run-button-34.svg)](https://www.pikapods.com/pods?run=flatnotes)
-
 
 ### Self Hosted
 
@@ -67,32 +72,35 @@ docker run -d \
   -e "PUID=1000" \
   -e "PGID=1000" \
   -e "FLATNOTES_AUTH_TYPE=password" \
+  -e "FLATNOTES_NESTED_NOTES=false" \
   -e "FLATNOTES_USERNAME=user" \
   -e 'FLATNOTES_PASSWORD=changeMe!' \
   -e "FLATNOTES_SECRET_KEY=aLongRandomSeriesOfCharacters" \
   -v "$(pwd)/data:/data" \
   -p "8080:8080" \
-  dullage/flatnotes:latest
+  ghcr.io/moutansos/flatnotes:latest
 ```
 
 ### Example Docker Compose
+
 ```yaml
 version: "3"
 
 services:
   flatnotes:
     container_name: flatnotes
-    image: dullage/flatnotes:latest
+    image: ghcr.io/moutansos/flatnotes:latest
     environment:
       PUID: 1000
       PGID: 1000
       FLATNOTES_AUTH_TYPE: "password"
+      FLATNOTES_NESTED_NOTES: "false" # Set to "true" to allow nested note paths (e.g. work/todo)
       FLATNOTES_USERNAME: "user"
       FLATNOTES_PASSWORD: "changeMe!"
       FLATNOTES_SECRET_KEY: "aLongRandomSeriesOfCharacters"
     volumes:
       - "./data:/data"
-      # Optional. Allows you to save the search index in a different location: 
+      # Optional. Allows you to save the search index in a different location:
       # - "./index:/data/.flatnotes"
     ports:
       - "8080:8080"
@@ -119,5 +127,5 @@ If you find this project useful, please consider buying me a beer. It would genu
 
 A special thanks to 2 fantastic open-source projects that make flatnotes possible.
 
-* [Whoosh](https://whoosh.readthedocs.io/en/latest/intro.html) - A fast, pure Python search engine library.
-* [TOAST UI Editor](https://ui.toast.com/tui-editor) - A GFM Markdown and WYSIWYG editor for the browser.
+- [Whoosh](https://whoosh.readthedocs.io/en/latest/intro.html) - A fast, pure Python search engine library.
+- [TOAST UI Editor](https://ui.toast.com/tui-editor) - A GFM Markdown and WYSIWYG editor for the browser.
