@@ -4,7 +4,7 @@ import { Note, SearchResult } from "./classes.js";
 
 import axios from "axios";
 import { getStoredToken } from "./tokenStorage.js";
-import { getToastOptions } from "./helpers.js";
+import { encodePathPreservingSlashes, getToastOptions } from "./helpers.js";
 import router from "./router.js";
 
 const api = axios.create();
@@ -104,7 +104,9 @@ export async function createNote(title, content) {
 
 export async function getNote(title) {
   try {
-    const response = await api.get(`api/notes/${encodeURIComponent(title)}`);
+    const response = await api.get(
+      `api/notes/${encodePathPreservingSlashes(title)}`,
+    );
     return new Note(response.data);
   } catch (response) {
     return Promise.reject(response);
@@ -113,10 +115,13 @@ export async function getNote(title) {
 
 export async function updateNote(title, newTitle, newContent) {
   try {
-    const response = await api.patch(`api/notes/${encodeURIComponent(title)}`, {
-      newTitle: newTitle,
-      newContent: newContent,
-    });
+    const response = await api.patch(
+      `api/notes/${encodePathPreservingSlashes(title)}`,
+      {
+        newTitle: newTitle,
+        newContent: newContent,
+      },
+    );
     return new Note(response.data);
   } catch (response) {
     return Promise.reject(response);
@@ -125,7 +130,7 @@ export async function updateNote(title, newTitle, newContent) {
 
 export async function deleteNote(title) {
   try {
-    await api.delete(`api/notes/${encodeURIComponent(title)}`);
+    await api.delete(`api/notes/${encodePathPreservingSlashes(title)}`);
   } catch (response) {
     return Promise.reject(response);
   }

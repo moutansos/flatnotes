@@ -4,7 +4,7 @@ from pydantic import Field
 from pydantic.functional_validators import AfterValidator
 from typing_extensions import Annotated
 
-from helpers import CustomBaseModel, is_valid_filename, strip_whitespace
+from helpers import CustomBaseModel, strip_whitespace
 
 
 class NoteBase(CustomBaseModel):
@@ -15,7 +15,6 @@ class NoteCreate(CustomBaseModel):
     title: Annotated[
         str,
         AfterValidator(strip_whitespace),
-        AfterValidator(is_valid_filename),
     ]
     content: Optional[str] = Field(None)
 
@@ -30,7 +29,6 @@ class NoteUpdate(CustomBaseModel):
     new_title: Annotated[
         Optional[str],
         AfterValidator(strip_whitespace),
-        AfterValidator(is_valid_filename),
     ] = Field(None)
     new_content: Optional[str] = Field(None)
 

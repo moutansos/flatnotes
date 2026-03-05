@@ -18,7 +18,7 @@ from whoosh.query import Every
 from whoosh.searching import Hit
 from whoosh.support.charset import accent_map
 
-from helpers import get_env, is_valid_filename
+from helpers import get_env, is_valid_note_title
 from logger import logger
 
 from ..base import BaseNotes
@@ -47,8 +47,9 @@ class FileSystemNotes(BaseNotes):
         r"(?:(?<=^)|(?<=\s))#[a-zA-Z0-9_-]+(?=\s|$)"
     )
 
-    def __init__(self):
+    def __init__(self, nested_notes: bool = False):
         self.storage_path = get_env("FLATNOTES_PATH", mandatory=True)
+        self.nested_notes = nested_notes
         if not os.path.exists(self.storage_path):
             raise NotADirectoryError(
                 f"'{self.storage_path}' is not a valid directory."
@@ -58,6 +59,7 @@ class FileSystemNotes(BaseNotes):
 
     def create(self, data: NoteCreate) -> Note:
         """Create a new note."""
+        self._validate_title(data.title)
         filepath = self._path_from_title(data.title)
         self._write_file(filepath, data.content)
         return Note(
@@ -68,7 +70,7 @@ class FileSystemNotes(BaseNotes):
 
     def get(self, title: str) -> Note:
         """Get a specific note."""
-        is_valid_filename(title)
+        self._validate_title(title)
         filepath = self._path_from_title(title)
         content = self._read_file(filepath)
         return Note(
@@ -79,15 +81,18 @@ class FileSystemNotes(BaseNotes):
 
     def update(self, title: str, data: NoteUpdate) -> Note:
         """Update a specific note."""
-        is_valid_filename(title)
+        self._validate_title(title)
         filepath = self._path_from_title(title)
         if data.new_title is not None:
+            self._validate_title(data.new_title)
             new_filepath = self._path_from_title(data.new_title)
             if filepath != new_filepath and os.path.isfile(new_filepath):
                 raise FileExistsError(
                     f"Failed to rename. '{data.new_title}' already exists."
                 )
+            os.makedirs(os.path.dirname(new_filepath), exist_ok=True)
             os.rename(filepath, new_filepath)
+            self._cleanup_empty_dirs(os.path.dirname(filepath))
             title = data.new_title
             filepath = new_filepath
         if data.new_content is not None:
@@ -103,9 +108,10 @@ class FileSystemNotes(BaseNotes):
 
     def delete(self, title: str) -> None:
         """Delete a specific note."""
-        is_valid_filename(title)
+        self._validate_title(title)
         filepath = self._path_from_title(title)
         os.remove(filepath)
+        self._cleanup_empty_dirs(os.path.dirname(filepath))
 
     def search(
         self,
@@ -164,6 +170,12 @@ class FileSystemNotes(BaseNotes):
         return os.path.join(self.storage_path, ".flatnotes")
 
     def _path_from_title(self, title: str) -> str:
+        self._validate_title(title)
+        if self.nested_notes:
+            return os.path.join(
+                self.storage_path,
+                *title.split("/"),
+            ) + MARKDOWN_EXT
         return os.path.join(self.storage_path, title + MARKDOWN_EXT)
 
     def _get_by_filename(self, filename: str) -> Note:
@@ -224,6 +236,18 @@ class FileSystemNotes(BaseNotes):
 
     def _list_all_note_filenames(self) -> List[str]:
         """Return a list of all note filenames."""
+        if self.nested_notes:
+            all_filenames = []
+            for root, dirs, files in os.walk(self.storage_path):
+                dirs[:] = [
+                    dirname for dirname in dirs if dirname != ".flatnotes"
+                ]
+                for filename in files:
+                    if filename.endswith(MARKDOWN_EXT):
+                        filepath = os.path.join(root, filename)
+                        relpath = os.path.relpath(filepath, self.storage_path)
+                        all_filenames.append(relpath.replace(os.path.sep, "/"))
+            return all_filenames
         return [
             os.path.split(filepath)[1]
             for filepath in glob.glob(
@@ -241,6 +265,13 @@ class FileSystemNotes(BaseNotes):
         with self.index.searcher() as searcher:
             for idx_note in searcher.all_stored_fields():
                 idx_filename = idx_note["filename"]
+                if not self.nested_notes and "/" in idx_filename:
+                    writer.delete_by_term("filename", idx_filename)
+                    logger.info(
+                        f"'{idx_filename}' removed from index "
+                        + "(nested notes disabled)"
+                    )
+                    continue
                 idx_filepath = os.path.join(self.storage_path, idx_filename)
                 # Delete missing
                 if not os.path.exists(idx_filepath):
@@ -390,5 +421,28 @@ class FileSystemNotes(BaseNotes):
     @staticmethod
     def _write_file(filepath: str, content: str, overwrite: bool = False):
         logger.debug(f"Writing to '{filepath}'")
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, "w" if overwrite else "x") as f:
             f.write(content)
+
+    def _validate_title(self, title: str):
+        is_valid_note_title(title, nested_notes=self.nested_notes)
+
+    def _cleanup_empty_dirs(self, start_dir: str):
+        if not self.nested_notes:
+            return
+        if not start_dir:
+            return
+        abs_storage_path = os.path.abspath(self.storage_path)
+        current_dir = os.path.abspath(start_dir)
+        while current_dir != abs_storage_path:
+            if (
+                os.path.commonpath([abs_storage_path, current_dir])
+                != abs_storage_path
+            ):
+                return
+            try:
+                os.rmdir(current_dir)
+            except OSError:
+                return
+            current_dir = os.path.dirname(current_dir)

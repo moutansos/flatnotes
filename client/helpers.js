@@ -8,6 +8,17 @@ export function getToastOptions(description, title, severity) {
   };
 }
 
+export function encodePathPreservingSlashes(path) {
+  return path
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+}
+
+export function getNotePath(title) {
+  return `/note/${encodePathPreservingSlashes(title)}`;
+}
+
 export function setDarkThemeOn(save = true) {
   document.body.classList.add("dark");
   if (save) localStorage.setItem("darkTheme", "true");

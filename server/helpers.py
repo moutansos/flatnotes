@@ -25,6 +25,29 @@ def is_valid_filename(value):
     return value
 
 
+def is_valid_note_title(value: str, nested_notes: bool = False):
+    """Raise ValueError if the declared note title is invalid for the current
+    storage mode."""
+    if not nested_notes:
+        return is_valid_filename(value)
+
+    if os.path.isabs(value):
+        raise ValueError("title cannot be an absolute path")
+
+    segments = value.split("/")
+    if any(segment == "" for segment in segments):
+        raise ValueError("title cannot contain empty path segments")
+
+    for segment in segments:
+        if segment in [".", ".."]:
+            raise ValueError("title cannot include unsafe path segments")
+        if segment == ".flatnotes":
+            raise ValueError("title cannot include reserved path segments")
+        is_valid_filename(segment)
+
+    return value
+
+
 def strip_whitespace(value):
     """Return the declared string with leading and trailing whitespace
     removed."""

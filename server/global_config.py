@@ -15,6 +15,7 @@ class GlobalConfig:
         self.quick_access_sort: str = self._quick_access_sort()
         self.quick_access_limit: int = self._quick_access_limit()
         self.path_prefix: str = self._load_path_prefix()
+        self.nested_notes: bool = self._load_nested_notes()
 
     def load_auth(self):
         if self.auth_type in (AuthType.NONE, AuthType.READ_ONLY):
@@ -27,7 +28,7 @@ class GlobalConfig:
     def load_note_storage(self):
         from notes.file_system import FileSystemNotes
 
-        return FileSystemNotes()
+        return FileSystemNotes(nested_notes=self.nested_notes)
 
     def load_attachment_storage(self):
         from attachments.file_system import FileSystemAttachments
@@ -101,6 +102,14 @@ class GlobalConfig:
             sys.exit(1)
         return value
 
+    def _load_nested_notes(self):
+        return get_env(
+            "FLATNOTES_NESTED_NOTES",
+            mandatory=False,
+            default=False,
+            cast_bool=True,
+        )
+
 
 class AuthType(str, Enum):
     NONE = "none"
@@ -116,3 +125,4 @@ class GlobalConfigResponseModel(CustomBaseModel):
     quick_access_term: str
     quick_access_sort: str
     quick_access_limit: int
+    nested_notes: bool

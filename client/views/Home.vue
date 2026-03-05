@@ -16,7 +16,7 @@
         </p>
         <RouterLink
           v-for="note in notes.slice(0, globalStore.config.quickAccessLimit)"
-          :to="{ name: 'note', params: { title: note.title } }"
+          :to="getNotePath(note.title)"
           class="mb-1"
         >
           <CustomButton :label="note.title" />
@@ -50,6 +50,7 @@ import LoadingIndicator from "../components/LoadingIndicator.vue";
 import Logo from "../components/Logo.vue";
 import { searchSortOptions } from "../constants.js";
 import { useGlobalStore } from "../globalStore.js";
+import { getNotePath } from "../helpers.js";
 import SearchInput from "../partials/SearchInput.vue";
 
 const globalStore = useGlobalStore();
@@ -65,9 +66,7 @@ function init() {
     globalStore.config.quickAccessTerm,
     globalStore.config.quickAccessSort,
     // Order by ascending if sorting by title, descending otherwise.
-    globalStore.config.quickAccessSort === "title"
-      ? "asc"
-      : "desc",
+    globalStore.config.quickAccessSort === "title" ? "asc" : "desc",
     // Limit is increased by 1 to check if there are more notes than the limit.
     globalStore.config.quickAccessLimit + 1,
   )

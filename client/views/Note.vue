@@ -143,7 +143,7 @@ import ToastEditor from "../components/toastui/ToastEditor.vue";
 import ToastViewer from "../components/toastui/ToastViewer.vue";
 import { authTypes } from "../constants.js";
 import { useGlobalStore } from "../globalStore.js";
-import { getToastOptions } from "../helpers.js";
+import { getNotePath, getToastOptions } from "../helpers.js";
 import { isCurrentTokenStored } from "../tokenStorage.js";
 
 const props = defineProps({
@@ -162,7 +162,10 @@ const isDraftModalVisible = ref(false);
 const isNewNote = computed(() => !props.title);
 const loadingIndicator = ref();
 const note = ref({});
-const reservedFilenameCharacters = /[<>:"/\\|?*]/;
+const reservedAttachmentFilenameCharacters = /[<>:"/\\|?*]/;
+const reservedNoteTitleCharacters = computed(() =>
+  globalStore.config.nestedNotes ? /[<>:"\\|?*]/ : /[<>:"/\\|?*]/,
+);
 const router = useRouter();
 const newTitle = ref();
 const toast = useToast();
@@ -263,8 +266,11 @@ function saveHandler(close = false) {
   }
 
   // Invalid Character Validation
-  if (reservedFilenameCharacters.test(newTitle.value)) {
-    badFilenameToast("Title");
+  if (reservedNoteTitleCharacters.value.test(newTitle.value)) {
+    badFilenameToast(
+      "Title",
+      globalStore.config.nestedNotes ? '<>:"\\|?*' : '<>:"/\\|?*',
+    );
     return;
   }
 
@@ -282,16 +288,11 @@ function saveNew(newTitle, newContent, close = false) {
     .then((data) => {
       clearDraft();
       note.value = data;
-      router
-        .push({
-          name: "note",
-          params: { title: note.value.title },
-        })
-        .then(() => {
-          // Wait for the route to be updated before setting edit mode to false
-          // as the route is used to determine the action.
-          noteSaveSuccess(close);
-        });
+      router.push(getNotePath(note.value.title)).then(() => {
+        // Wait for the route to be updated before setting edit mode to false
+        // as the route is used to determine the action.
+        noteSaveSuccess(close);
+      });
     })
     .catch(noteSaveFailure);
 }
@@ -307,7 +308,7 @@ function saveExisting(newTitle, newContent, close = false) {
     .then((data) => {
       clearDraft();
       note.value = data;
-      router.replace({ name: "note", params: { title: note.value.title } });
+      router.replace(getNotePath(note.value.title));
       noteSaveSuccess(close);
     })
     .catch(noteSaveFailure);
@@ -319,6 +320,14 @@ function noteSaveFailure(error) {
       getToastOptions(
         "A note with this title already exists. Please try again with a new title.",
         "Duplicate",
+        "error",
+      ),
+    );
+  } else if (error.response?.status === 400) {
+    toast.add(
+      getToastOptions(
+        "This note title is invalid. Please update it and try again.",
+        "Invalid Title",
         "error",
       ),
     );
@@ -375,7 +384,7 @@ function addImageBlobHook(file, callback) {
 
 function postAttachment(file) {
   // Invalid Character Validation
-  if (reservedFilenameCharacters.test(file.name)) {
+  if (reservedAttachmentFilenameCharacters.test(file.name)) {
     badFilenameToast("Title");
     return;
   }
@@ -493,10 +502,10 @@ function entityTooLargeToast(entityName) {
   );
 }
 
-function badFilenameToast(entityName) {
+function badFilenameToast(entityName, invalidChars = '<>:"/\\|?*') {
   toast.add(
     getToastOptions(
-      'Due to filename restrictions, the following characters are not allowed: <>:"/\\|?*',
+      `Due to filename restrictions, the following characters are not allowed: ${invalidChars}`,
       `Invalid ${entityName}`,
       "error",
     ),

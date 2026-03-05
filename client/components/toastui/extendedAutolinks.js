@@ -1,4 +1,5 @@
 import { params, searchSortOptions } from "../../constants.js";
+import { getNotePath } from "../../helpers.js";
 
 import router from "../../router.js";
 
@@ -83,7 +84,7 @@ function parseWikiLink(source) {
       return {
         text,
         range: [match.index, match.index + match[0].length - 1],
-        url: `${router.resolve({ name: "note", params: { title: text.trim() } }).href}`,
+        url: router.resolve(getNotePath(text.trim())).href,
       };
     });
   }
